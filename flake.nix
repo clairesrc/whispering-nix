@@ -210,18 +210,20 @@
 
             # Copy workspace node_modules if they exist
             if [ -d "${npmDeps}/apps" ]; then
-              cp -r ${npmDeps}/apps/*/node_modules apps/ 2>/dev/null || true
-              chmod -R u+w apps/*/node_modules 2>/dev/null || true
+              for app in ${npmDeps}/apps/*; do
+                if [ -d "$app/node_modules" ]; then
+                  appName=$(basename "$app")
+                  if [ -d "apps/$appName" ]; then
+                    echo "Copying node_modules for $appName"
+                    cp -r "$app/node_modules" "apps/$appName/"
+                    chmod -R u+w "apps/$appName/node_modules"
+                  fi
+                fi
+              done
             fi
 
-            # Build the whispering frontend (SvelteKit)
-            cd apps/whispering
-            bun run build
-
-            # Build Tauri/Rust backend
-            cd src-tauri
-
-            # Configure cargo
+            # Add node_modules binaries to PATH
+            export PATH="$PWD/node_modules/.bin:$PWD/apps/whispering/node_modules/.bin:$PATH"
             mkdir -p .cargo
             cat > .cargo/config.toml << 'CARGOCONF'
             [net]
