@@ -1,6 +1,9 @@
 # Whispering Nix Flake
 
-Nix flake for [Whispering](https://github.com/EpicenterHQ/epicenter/tree/main/apps/whispering) - an open-source speech-to-text application built with Tauri and SvelteKit.
+Vibe coded Nix flake for [Whispering](https://github.com/EpicenterHQ/epicenter/tree/main/apps/whispering) - an open-source speech-to-text application built with Tauri and SvelteKit.
+
+**NOTE:** Builds and runs, but segfaults on trying to open settings tab to download Moonshine. I thought this was an issue with my packaging, but then I tried the Appimage from upstream and it behaved the same way, so I think there is an issue with NixOS compatibility. I tried `steam-run` to emulate FHS in case that was the problem, but it made no difference. Likewise, my LLM suggested various source patches to fix the issue but I was not able to get them to work. So, I'm putting this package on hold for now.
+
 
 ## Features
 
