@@ -378,11 +378,18 @@
             # Patch RPATH
             patchelf --set-rpath "${libPath}" $out/bin/whispering || true
 
+            # Verify frontend build exists
+            if [ ! -f $out/lib/whispering/frontend/index.html ]; then
+              echo "WARNING: Frontend build seems missing or incomplete!"
+            fi
+
             # Wrap with environment variables
             wrapProgram $out/bin/whispering \
               --prefix LD_LIBRARY_PATH : "${libPath}" \
               --prefix GIO_MODULE_DIR : "${pkgs.glib-networking}/lib/gio/modules" \
               --set WEBKIT_DISABLE_COMPOSITING_MODE "1" \
+              --set WEBKIT_DISABLE_DMABUF_RENDERER "1" \
+              --set WEBKIT_FORCE_SANDBOX "0" \
               --prefix XDG_DATA_DIRS : "${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}:${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}" \
               --prefix GST_PLUGIN_SYSTEM_PATH_1_0 : "${
                 pkgs.lib.makeSearchPath "lib/gstreamer-1.0" (
@@ -430,6 +437,8 @@
             export OPENSSL_DIR="${pkgs.openssl.dev}"
             export OPENSSL_LIB_DIR="${pkgs.openssl.out}/lib"
             export WEBKIT_DISABLE_COMPOSITING_MODE=1
+            export WEBKIT_DISABLE_DMABUF_RENDERER=1
+            export WEBKIT_FORCE_SANDBOX=0
 
             echo "🎤 Whispering development environment loaded!"
             echo ""
