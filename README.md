@@ -31,7 +31,7 @@ Add the flake to your inputs:
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    whispering.url = "github:your-username/whispering-nix";
+    whispering.url = "github:clairesrc/whispering-nix";
     # Or from local path:
     # whispering.url = "path:/path/to/whispering-nix";
   };
