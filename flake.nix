@@ -100,6 +100,9 @@
           gst_all_1.gstreamer
           gst_all_1.gst-plugins-base
           gst_all_1.gst-plugins-good
+          gst_all_1.gst-plugins-bad
+          gst_all_1.gst-plugins-ugly
+          gst_all_1.gst-libav
 
           # C++ Standard Library (required for many Rust/C++ apps)
           stdenv.cc.cc.lib
@@ -429,6 +432,9 @@
                     gstreamer
                     gst-plugins-base
                     gst-plugins-good
+                    gst-plugins-bad
+                    gst-plugins-ugly
+                    gst-libav
                   ]
                 )
               }"
