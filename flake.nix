@@ -389,7 +389,7 @@
               --prefix GIO_MODULE_DIR : "${pkgs.glib-networking}/lib/gio/modules" \
               --set WEBKIT_DISABLE_COMPOSITING_MODE "1" \
               --set WEBKIT_DISABLE_DMABUF_RENDERER "1" \
-              --set WEBKIT_FORCE_SANDBOX "0" \
+              --set WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS "1" \
               --prefix XDG_DATA_DIRS : "${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}:${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}" \
               --prefix GST_PLUGIN_SYSTEM_PATH_1_0 : "${
                 pkgs.lib.makeSearchPath "lib/gstreamer-1.0" (
@@ -438,7 +438,7 @@
             export OPENSSL_LIB_DIR="${pkgs.openssl.out}/lib"
             export WEBKIT_DISABLE_COMPOSITING_MODE=1
             export WEBKIT_DISABLE_DMABUF_RENDERER=1
-            export WEBKIT_FORCE_SANDBOX=0
+            export WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1
 
             echo "🎤 Whispering development environment loaded!"
             echo ""
