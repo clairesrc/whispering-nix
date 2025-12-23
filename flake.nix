@@ -222,6 +222,8 @@
           inherit version src;
 
           inherit nativeBuildInputs buildInputs;
+          
+          patches = [ ./fix-hang.patch ];
 
           # Disable default npm/node install hooks
           dontNpmInstall = true;
