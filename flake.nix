@@ -290,7 +290,16 @@
 
             # Build the whispering frontend (SvelteKit)
             cd apps/whispering
+            echo "Building frontend..."
             bun run build
+            
+            echo "Checking frontend build output..."
+            if [ -d "build" ]; then
+              ls -la build
+            else
+              echo "ERROR: apps/whispering/build directory was not created!"
+              exit 1
+            fi
 
             # Build Tauri/Rust backend
             cd src-tauri
@@ -374,10 +383,17 @@
           '';
 
           # Wrap the binary with required library paths and environment
-          postFixup = ''
-            # Patch RPATH
-            patchelf --set-rpath "${libPath}" $out/bin/whispering || true
+          preFixup = ''
+            # Patch RPATH before wrapping
+            # Find the binary - might be in .whispering-wrapped if wrapped earlier, or just whispering
+            if [ -f $out/bin/whispering ]; then
+               if file $out/bin/whispering | grep -q "ELF"; then
+                 patchelf --set-rpath "${libPath}" $out/bin/whispering || true
+               fi
+            fi
+          '';
 
+          postFixup = ''
             # Verify frontend build exists
             if [ ! -f $out/lib/whispering/frontend/index.html ]; then
               echo "WARNING: Frontend build seems missing or incomplete!"
