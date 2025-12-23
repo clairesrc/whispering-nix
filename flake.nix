@@ -45,6 +45,7 @@
           gobject-introspection
           makeWrapper
           shaderc # for glslc
+          jq
         ];
 
         # Build inputs / libraries needed for Tauri + transcribe-rs
@@ -297,15 +298,20 @@
             bun run build
             
             echo "Checking frontend build output..."
-            if [ -d "build" ]; then
-              ls -la build
-            else
-              echo "ERROR: apps/whispering/build directory was not created!"
+            ls -R build || echo "build dir not found"
+            
+            if [ ! -f build/index.html ]; then
+              echo "CRITICAL ERROR: build/index.html missing! Frontend build failed or path is wrong."
               exit 1
             fi
 
             # Build Tauri/Rust backend
             cd src-tauri
+            
+            # Patch tauri.conf.json to ensure correct paths and no devUrl
+            echo "Patching tauri.conf.json..."
+            jq '.build.frontendDist = "../build" | .build.devUrl = null | .build.beforeBuildCommand = null | .build.beforeDevCommand = null' tauri.conf.json > tauri.conf.json.tmp && mv tauri.conf.json.tmp tauri.conf.json
+            cat tauri.conf.json
 
             # Configure cargo
             mkdir -p .cargo
@@ -347,14 +353,14 @@
                         install -Dm755 $(find . -name whispering -type f | grep release | head -n 1) $out/bin/whispering
                         
                         # Install frontend build (Tauri embeds this, but useful for debugging)
-                        # We are in src-tauri, so build is at ../build
-                        if [ -d ../build ]; then
+                        if [ -d apps/whispering/build ]; then
                           mkdir -p $out/lib/whispering/frontend
-                          cp -r ../build/* $out/lib/whispering/frontend/
+                          cp -r apps/whispering/build/* $out/lib/whispering/frontend/
                           echo "Frontend build copied successfully."
                         else
-                          echo "WARNING: ../build directory not found in installPhase (pwd: $(pwd))"
-                          ls -la .. || true
+                           echo "WARNING: apps/whispering/build not found in installPhase (pwd: $(pwd))"
+                           # Try to list to see where we are
+                           ls -la apps/whispering || true
                         fi
                         
                         # Install desktop entry
