@@ -78,6 +78,8 @@
           cairo
           pango
           gdk-pixbuf
+          libglvnd # For OpenGL
+          mesa # For software rendering fallbacks
 
           # X11 support
           xorg.libX11
@@ -103,6 +105,9 @@
           gst_all_1.gst-plugins-bad
           gst_all_1.gst-plugins-ugly
           gst_all_1.gst-libav
+
+          # Command line tools used by the app
+          ffmpeg
 
           # C++ Standard Library (required for many Rust/C++ apps)
           stdenv.cc.cc.lib
@@ -424,6 +429,8 @@
               --set WEBKIT_DISABLE_COMPOSITING_MODE "1" \
               --set WEBKIT_DISABLE_DMABUF_RENDERER "1" \
               --set WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS "1" \
+              --set RUST_BACKTRACE "1" \
+              --prefix PATH : "${pkgs.lib.makeBinPath [ pkgs.ffmpeg ]}" \
               --prefix XDG_DATA_DIRS : "${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}:${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}" \
               --prefix GST_PLUGIN_SYSTEM_PATH_1_0 : "${
                 pkgs.lib.makeSearchPath "lib/gstreamer-1.0" (
