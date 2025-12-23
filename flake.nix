@@ -347,8 +347,14 @@
                         install -Dm755 $(find . -name whispering -type f | grep release | head -n 1) $out/bin/whispering
                         
                         # Install frontend build (Tauri embeds this, but useful for debugging)
-                        if [ -d apps/whispering/build ]; then
-                          cp -r apps/whispering/build $out/lib/whispering/frontend
+                        # We are in src-tauri, so build is at ../build
+                        if [ -d ../build ]; then
+                          mkdir -p $out/lib/whispering/frontend
+                          cp -r ../build/* $out/lib/whispering/frontend/
+                          echo "Frontend build copied successfully."
+                        else
+                          echo "WARNING: ../build directory not found in installPhase (pwd: $(pwd))"
+                          ls -la .. || true
                         fi
                         
                         # Install desktop entry
