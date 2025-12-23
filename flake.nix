@@ -222,8 +222,8 @@
           inherit version src;
 
           inherit nativeBuildInputs buildInputs;
-          
-          patches = [ ./fix-hang.patch ];
+
+          patches = [ ./skip-ffmpeg-check.patch ];
 
           # Disable default npm/node install hooks
           dontNpmInstall = true;
