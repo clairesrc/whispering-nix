@@ -44,10 +44,15 @@
           wrapGAppsHook3
           gobject-introspection
           makeWrapper
+          shaderc # for glslc
         ];
 
         # Build inputs / libraries needed for Tauri + transcribe-rs
         buildInputs = with pkgs; [
+          # Vulkan dependencies (for whisper-rs/ggml)
+          vulkan-headers
+          vulkan-loader
+
           # GTK and WebKit for Tauri
           gtk3
           webkitgtk_4_1
@@ -167,6 +172,39 @@
           dontFixup = true;
         };
 
+        # Fixed-output derivation for Cargo dependencies
+        cargoDepsHash = "sha256-CZU/8pCKe+uKH7lyCQGnT2gY9F5grimSER+UxUEv4fo=";
+
+        cargoDeps = pkgs.stdenv.mkDerivation {
+          pname = "whispering-cargo-deps";
+          inherit version src;
+          nativeBuildInputs = with pkgs; [
+            cargo
+            rustToolchain
+            cacert
+            git
+          ];
+
+          outputHashAlgo = "sha256";
+          outputHashMode = "recursive";
+          outputHash = cargoDepsHash;
+
+          buildPhase = ''
+            cd apps/whispering/src-tauri
+            export CARGO_HOME=$TMPDIR/cargo
+
+            mkdir -p $out
+            # Vendor dependencies to $out
+            # We capture the config but replace the absolute path to avoid self-reference in FOD
+            cargo vendor $out > config.toml
+            sed -i "s|$out|@VENDOR@|g" config.toml
+            install -Dm644 config.toml $out/config.toml
+          '';
+
+          installPhase = "true";
+          dontFixup = true;
+        };
+
         whispering = pkgs.stdenv.mkDerivation rec {
           pname = "whispering";
           inherit version src;
@@ -180,6 +218,10 @@
           OPENSSL_NO_VENDOR = "1";
           OPENSSL_DIR = "${pkgs.openssl.dev}";
           OPENSSL_LIB_DIR = "${pkgs.openssl.out}/lib";
+
+          # For bindgen (whisper-rs-sys)
+          LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
+          BINDGEN_EXTRA_CLANG_ARGS = "-I${pkgs.libclang.lib}/lib/clang/${pkgs.libclang.version}/include";
 
           # For webkit/gtk
           GIO_MODULE_DIR = "${pkgs.glib-networking}/lib/gio/modules";
@@ -222,26 +264,66 @@
               done
             fi
 
+            # Copy packages node_modules if they exist
+            if [ -d "${npmDeps}/packages" ]; then
+              for pkg in ${npmDeps}/packages/*; do
+                if [ -d "$pkg/node_modules" ]; then
+                  pkgName=$(basename "$pkg")
+                  if [ -d "packages/$pkgName" ]; then
+                    echo "Copying node_modules for packages/$pkgName"
+                    cp -r "$pkg/node_modules" "packages/$pkgName/"
+                    chmod -R u+w "packages/$pkgName/node_modules"
+                  fi
+                fi
+              done
+            fi
+
+            # Patch shebangs in node_modules to fix /usr/bin/env issues
+            patchShebangs node_modules
+            patchShebangs apps
+            if [ -d "packages" ]; then
+              patchShebangs packages
+            fi
+
             # Add node_modules binaries to PATH
             export PATH="$PWD/node_modules/.bin:$PWD/apps/whispering/node_modules/.bin:$PATH"
+
+            # Build the whispering frontend (SvelteKit)
+            cd apps/whispering
+            bun run build
+
+            # Build Tauri/Rust backend
+            cd src-tauri
+
+            # Configure cargo
             mkdir -p .cargo
             cat > .cargo/config.toml << 'CARGOCONF'
             [net]
-            offline = false
+            offline = true
 
             [build]
             rustflags = ["-C", "link-arg=-Wl,-rpath,${libPath}"]
             CARGOCONF
 
-            cargo build --release --locked || cargo build --release
+            # Copy vendored dependencies to be writable (needed for tauri plugins that generate files)
+            cp -r ${cargoDeps} vendor
+            chmod -R u+w vendor
 
-            cd ../../..
-
+            # Append vendored dependencies config
+            # Substitute the placeholder with the local path
+            sed "s|@VENDOR@|$PWD/vendor|g" ${cargoDeps}/config.toml >> .cargo/config.toml
+            
+            # Build the release binary
+            cargo build --release --bin whispering
+            
             runHook postBuild
           '';
 
           installPhase = ''
                         runHook preInstall
+                        
+                        # Debug: find the binary
+                        find . -name whispering -type f
                         
                         # Create output directories
                         mkdir -p $out/bin
@@ -249,8 +331,8 @@
                         mkdir -p $out/share/icons/hicolor/{32x32,128x128,256x256}/apps
                         mkdir -p $out/lib/whispering
                         
-                        # Install the binary
-                        install -Dm755 apps/whispering/src-tauri/target/release/whispering $out/bin/whispering
+                        # Install the binary (use find to locate it robustly)
+                        install -Dm755 $(find . -name whispering -type f | grep release | head -n 1) $out/bin/whispering
                         
                         # Install frontend build (Tauri embeds this, but useful for debugging)
                         if [ -d apps/whispering/build ]; then
