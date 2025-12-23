@@ -99,6 +99,9 @@
           gst_all_1.gstreamer
           gst_all_1.gst-plugins-base
           gst_all_1.gst-plugins-good
+
+          # C++ Standard Library (required for many Rust/C++ apps)
+          stdenv.cc.cc.lib
         ];
 
         # Library path for runtime
