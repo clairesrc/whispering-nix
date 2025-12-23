@@ -428,7 +428,9 @@
               --prefix GIO_MODULE_DIR : "${pkgs.glib-networking}/lib/gio/modules" \
               --set WEBKIT_DISABLE_COMPOSITING_MODE "1" \
               --set WEBKIT_DISABLE_DMABUF_RENDERER "1" \
+              --set WEBKIT_DISABLE_ACCELERATED_2D_CANVAS "1" \
               --set WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS "1" \
+              --set GDK_BACKEND "x11" \
               --set RUST_BACKTRACE "1" \
               --prefix PATH : "${pkgs.lib.makeBinPath [ pkgs.ffmpeg ]}" \
               --prefix XDG_DATA_DIRS : "${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}:${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}" \
