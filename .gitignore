@@ -11,3 +11,6 @@ result-*
 *.swp
 *.swo
 *~
+
+
+temp_epicenter/

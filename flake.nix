@@ -223,7 +223,7 @@
 
           inherit nativeBuildInputs buildInputs;
 
-          patches = [ ./skip-ffmpeg-check.patch ];
+          patches = [ ./manual-paths.patch ];
 
           # Disable default npm/node install hooks
           dontNpmInstall = true;

@@ -1,0 +1,86 @@
+--- a/apps/whispering/src-tauri/src/lib.rs
++++ b/apps/whispering/src-tauri/src/lib.rs
+@@ -171,6 +171,7 @@
+         read_markdown_files,
+         count_markdown_files,
+         bulk_delete_files,
++        get_home_dir,
+     ]);
+ 
+     let app = builder
+@@ -275,3 +276,8 @@
+ 
+     Ok(())
+ }
++
++#[tauri::command]
++fn get_home_dir() -> String {
++    std::env::var("HOME").unwrap_or_else(|_| ".".to_string())
++}
+--- a/apps/whispering/src/lib/constants/paths.ts
++++ b/apps/whispering/src/lib/constants/paths.ts
+@@ -1,35 +1,34 @@
++import { invoke } from '@tauri-apps/api/core';
++
++const getBaseDir = async () => `${await invoke('get_home_dir')}/.local/share/com.bradenwong.whispering`;
++const join = async (...parts: string[]) => parts.join('/');
++
+ export const PATHS = {
+ 	MODELS: {
+ 		async WHISPER() {
+-			const { appDataDir, join } = await import('@tauri-apps/api/path');
+-			const dir = await appDataDir();
++			const dir = await getBaseDir();
+ 			return await join(dir, 'models', 'whisper');
+ 		},
+ 		async PARAKEET() {
+-			const { appDataDir, join } = await import('@tauri-apps/api/path');
+-			const dir = await appDataDir();
++			const dir = await getBaseDir();
+ 			return await join(dir, 'models', 'parakeet');
+ 		},
+ 		async MOONSHINE() {
+-			const { appDataDir, join } = await import('@tauri-apps/api/path');
+-			const dir = await appDataDir();
++			const dir = await getBaseDir();
+ 			return await join(dir, 'models', 'moonshine');
+ 		},
+ 	},
+ 	DB: {
+ 		async RECORDINGS() {
+-			const { appDataDir, join } = await import('@tauri-apps/api/path');
+-			const dir = await appDataDir();
++			const dir = await getBaseDir();
+ 			return await join(dir, 'recordings');
+ 		},
+ 		async TRANSFORMATIONS() {
+-			const { appDataDir, join } = await import('@tauri-apps/api/path');
+-			const dir = await appDataDir();
++			const dir = await getBaseDir();
+ 			return await join(dir, 'transformations');
+ 		},
+ 		async TRANSFORMATION_RUNS() {
+-			const { appDataDir, join } = await import('@tauri-apps/api/path');
+-			const dir = await appDataDir();
++			const dir = await getBaseDir();
+ 			return await join(dir, 'transformation-runs');
+ 		},
+ 	},
+--- a/apps/whispering/src/lib/services/desktop/ffmpeg.ts
++++ b/apps/whispering/src/lib/services/desktop/ffmpeg.ts
+@@ -1,4 +1,3 @@
+-import { appDataDir, join } from '@tauri-apps/api/path';
+ import { exists, remove, writeFile } from '@tauri-apps/plugin-fs';
+ import { nanoid } from 'nanoid/non-secure';
+ import { createTaggedError, extractErrorMessage } from 'wellcrafted/error';
+@@ -6,6 +5,10 @@
+ import { asShellCommand, CommandServiceLive } from './command';
+ import { FsServiceLive } from './fs';
+ import { getFileExtensionFromFfmpegOptions } from './recorder/ffmpeg';
++import { invoke } from '@tauri-apps/api/core';
++
++const appDataDir = async () => `${await invoke('get_home_dir')}/.local/share/com.bradenwong.whispering`;
++const join = async (...parts: string[]) => parts.join('/');
+ 
+ export const { FfmpegServiceErr, FfmpegServiceError } =
+ 	createTaggedError('FfmpegServiceError');
