@@ -109,16 +109,67 @@
         # Then replace the hash below.
         srcHash = "sha256-Rtfcfs0KCM0LXDHOkIsJ7nUQrik04t0tOdRVnAFrurE=";
 
+        src = pkgs.fetchFromGitHub {
+          owner = "EpicenterHQ";
+          repo = "epicenter";
+          rev = "main"; # For reproducibility, pin to "v${version}" or specific commit
+          hash = srcHash;
+        };
+
+        # Fixed-output derivation to fetch npm/bun dependencies
+        # This has network access because it produces a content-addressed output
+        # To get the hash: build once with lib.fakeHash, then use the correct hash from the error
+        npmDepsHash = "sha256-EwinU+WpXpe8QW+4pdD2VDpFOm+aIpiV6kIg2Fru1xQ=";
+
+        npmDeps = pkgs.stdenv.mkDerivation {
+          pname = "whispering-npm-deps";
+          inherit version src;
+
+          nativeBuildInputs = with pkgs; [
+            bun
+            nodejs_20
+            cacert
+          ];
+
+          # This is a fixed-output derivation - it has network access
+          outputHashAlgo = "sha256";
+          outputHashMode = "recursive";
+          outputHash = npmDepsHash;
+
+          buildPhase = ''
+            runHook preBuild
+
+            export HOME=$TMPDIR
+            export BUN_INSTALL=$TMPDIR/bun
+
+            # Install dependencies
+            bun install --frozen-lockfile || bun install
+
+            runHook postBuild
+          '';
+
+          installPhase = ''
+            runHook preInstall
+
+            mkdir -p $out
+            cp -r node_modules $out/
+
+            # Also copy any workspace node_modules
+            find . -name 'node_modules' -type d | while read dir; do
+              relpath=$(dirname "$dir")
+              mkdir -p "$out/$relpath"
+              cp -r "$dir" "$out/$relpath/"
+            done
+
+            runHook postInstall
+          '';
+
+          dontFixup = true;
+        };
+
         whispering = pkgs.stdenv.mkDerivation rec {
           pname = "whispering";
-          inherit version;
-
-          src = pkgs.fetchFromGitHub {
-            owner = "EpicenterHQ";
-            repo = "epicenter";
-            rev = "main"; # For reproducibility, pin to "v${version}" or specific commit
-            hash = srcHash;
-          };
+          inherit version src;
 
           inherit nativeBuildInputs buildInputs;
 
@@ -153,8 +204,15 @@
           buildPhase = ''
             runHook preBuild
 
-            # Install all monorepo dependencies
-            bun install --frozen-lockfile || bun install
+            # Copy pre-fetched node_modules from the FOD
+            cp -r ${npmDeps}/node_modules ./node_modules
+            chmod -R u+w node_modules
+
+            # Copy workspace node_modules if they exist
+            if [ -d "${npmDeps}/apps" ]; then
+              cp -r ${npmDeps}/apps/*/node_modules apps/ 2>/dev/null || true
+              chmod -R u+w apps/*/node_modules 2>/dev/null || true
+            fi
 
             # Build the whispering frontend (SvelteKit)
             cd apps/whispering
